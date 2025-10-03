@@ -1,0 +1,10 @@
+%% Mermaid diagram of the local topology
+flowchart LR
+  U((Users)) -->|HTTP :3000| A[Next.js App Container]
+  A -->|/api/metrics| P[(Prometheus)]
+  P --> G[Grafana]
+  subgraph Docker Network 'app_net'
+    A
+    P
+    G
+  end

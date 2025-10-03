@@ -1,0 +1,65 @@
+version: "3.9"
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: docker-next-app:latest
+    container_name: nextjs-app
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app_net
+
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    container_name: prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+      - "--storage.tsdb.path=/prometheus"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROM_PORT:-9090}:9090"
+    restart: unless-stopped
+    networks:
+      - app_net
+
+  grafana:
+    image: grafana/grafana:10.4.5
+    container_name: grafana
+    # grafana runs as user 472 by default
+    user: "472"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - app_net
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  app_net:
+    driver: bridge
+    driver_opts:
+      # Tune MTU to reduce fragmentation in clouds/VPNs (adjust to your infra)
+      com.docker.network.driver.mtu: "${DOCKER_MTU:-1450}"
