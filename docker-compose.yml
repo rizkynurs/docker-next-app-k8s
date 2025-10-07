@@ -16,6 +16,24 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    privileged: true
+    networks:
+      - app_net
+  
+  cadvisor:
+    container_name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - "/:/rootfs"
+      - "/var/run:/var/run"
+      - "/sys:/sys"
+      - "/var/lib/docker/:/var/lib/docker"
+      - "/dev/disk/:/dev/disk"
+    privileged: true
+    devices:
+      - "/dev/kmsg"
     networks:
       - app_net
 
@@ -32,6 +50,7 @@ services:
     ports:
       - "${PROM_PORT:-9090}:9090"
     restart: unless-stopped
+    privileged: true
     networks:
       - app_net
 
@@ -50,6 +69,7 @@ services:
     restart: unless-stopped
     depends_on:
       - prometheus
+    privileged: true
     networks:
       - app_net
 
